@@ -1,0 +1,21 @@
+customer_id,name,city,transaction_id,amount,tx_date
+1,John Doe,Mumbai,1001,540,2024-01-12
+1,John Doe,Mumbai,1003,300,2024-01-18
+2,Aarti Sharma,Pune,1002,1290,2024-01-15
+2,Aarti Sharma,Pune,1008,450,2024-01-22
+3,Ravi Kumar,Delhi,1005,1500,2024-01-20
+3,Ravi Kumar,Delhi,1013,500,2024-01-27
+4,Sneha Patil,Nagpur,1004,780,2024-01-18
+5,Michael Brown,Bangalore,1007,900,2024-01-22
+6,Sara Wilson,Chennai,1020,950,2024-02-01
+7,Amit Singh,Jaipur,1006,220,2024-01-21
+8,Sunita Desai,Hyderabad,1017,670,2024-01-30
+9,Vijay Nair,Kochi,1009,180,2024-01-24
+11,Raj Malhotra,Indore,1018,1200,2024-01-31
+12,Kevin Lewis,Kolkata,1010,2400,2024-01-25
+14,Chris Martin,Goa,1019,350,2024-02-01
+15,Namrata Kulkarni,Nashik,1011,650,2024-01-26
+16,Pranav Joshi,Thane,1012,3000,2024-01-26
+18,Harish Menon,Bangalore,1014,820,2024-01-28
+19,Karan Shah,Pune,1015,150,2024-01-29
+20,Krisha Patel,Vadodara,1016,430,2024-01-29
