@@ -1,0 +1,7 @@
+header_line_to_skip
+{"event_id": "evt_1001", "user": "abc", "action": "click"}
+{"user": "xyz", "action": "view"}
+{"event_id": 12345, "user": "pqr"}
+{event_id: "evt_999", "user": "bad_json"}
+this is not json at all
+{"event_id": null, "user": "test"}
