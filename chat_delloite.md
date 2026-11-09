@@ -234,6 +234,7 @@ Explain BigQuery architecture.
 
 What is the difference between BigQuery and traditional RDBMS?
 
+	BigQuery is optimized for large-scale analytical workloads, while traditional RDBMS is optimized for transactional workloads. They complement each other rather than directly replace each other.
 Explain BigQuery storage and compute separation.
 
 What are BigQuery slots?
@@ -268,45 +269,206 @@ What is the difference between logical and physical storage billing?
 
 How do you optimize joins in BigQuery?
 
+
+	In my projects, when joining large fact tables with dimension tables in BigQuery, I first reduce the dataset using partition filters, select only required columns, and ensure appropriate clustering. For smaller dimension tables, BigQuery can automatically perform broadcast joins. I also analyze the execution plan to identify shuffle-heavy stages and data skew
+
+
 What is the use of nested and repeated fields?
+
+	Nested fields represent hierarchical relationships using STRUCT, while repeated fields represent multiple values using ARRAY. In my projects, I use nested and repeated fields when dealing with parent-child relationships, such as customers and orders, to avoid unnecessary joins and improve analytical query efficiency
 
 SQL questions
 
 Write SQL to find the second-highest salary.
+```sql
+SELECT salary
+FROM (
+    SELECT
+        salary,
+        DENSE_RANK() OVER (ORDER BY salary DESC) AS rnk
+    FROM employees
+) t
+WHERE rnk = 2;
 
+OR
+
+SELECT MAX(salary) AS second_highest_salary
+FROM employees
+WHERE salary < (
+    SELECT MAX(salary)
+    FROM employees
+);
+```
 Find duplicate records in a table.
+```sql
+SELECT
+    employee_id,
+    COUNT(*) AS duplicate_count
+FROM employees
+GROUP BY employee_id
+HAVING COUNT(*) > 1;
+```
 
 Remove duplicate records using ROW_NUMBER().
+```sql
+CREATE OR REPLACE TABLE employees AS
+SELECT * EXCEPT(rn)
+FROM (
+    SELECT *,
+           ROW_NUMBER() OVER (
+               PARTITION BY employee_id
+               ORDER BY updated_date DESC
+           ) AS rn
+    FROM employees
+)
+WHERE rn = 1;
+```
 
 Find the latest record for each customer.
 
 Calculate running totals using window functions.
+```sql
+SELECT
+    employee_id,
+    department,
+    salary,
+    SUM(salary) OVER (
+        PARTITION BY department
+        ORDER BY employee_id
+        ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+    ) AS running_total
+FROM employees;
+```
 
 Explain ROW_NUMBER, RANK, and DENSE_RANK.
 
+	ROW_NUMBER(): Assigns a unique sequential number to each row, even when values are duplicated.
+
+	RANK(): Assigns the same rank to duplicate values but skips the next rank.
+
+	DENSE_RANK(): Assigns the same rank to duplicate values without skipping the next rank.
+
 Find customers who purchased in consecutive months.
+```sql
+WITH monthly_purchases AS (
+    SELECT DISTINCT
+        customer_id,
+        DATE_TRUNC(order_date, MONTH) AS purchase_month
+    FROM orders
+),
+customer_orders AS (
+    SELECT
+        customer_id,
+        purchase_month,
+        LAG(purchase_month) OVER (
+            PARTITION BY customer_id
+            ORDER BY purchase_month
+        ) AS previous_month
+    FROM monthly_purchases
+)
+SELECT DISTINCT customer_id
+FROM customer_orders
+WHERE DATE_DIFF(purchase_month, previous_month, MONTH) = 1;
+```
 
 Implement SCD Type 2 using BigQuery SQL.
 
 Explain MERGE statement.
 
 Write a query to calculate daily revenue and month-over-month growth.
+```sql
+WITH daily_revenue AS (
+    SELECT
+        DATE(order_date) AS order_day,
+        SUM(revenue) AS daily_revenue
+    FROM orders
+    GROUP BY DATE(order_date)
+),
+monthly_revenue AS (
+    SELECT
+        DATE_TRUNC(order_day, MONTH) AS month,
+        SUM(daily_revenue) AS monthly_revenue
+    FROM daily_revenue
+    GROUP BY 1
+),
+mom_growth AS (
+    SELECT
+        month,
+        monthly_revenue,
+        LAG(monthly_revenue) OVER (
+            ORDER BY month
+        ) AS previous_month_revenue
+    FROM monthly_revenue
+)
+SELECT
+    month,
+    monthly_revenue,
+    previous_month_revenue,
+    ROUND(
+        SAFE_DIVIDE(
+            monthly_revenue - previous_month_revenue,
+            previous_month_revenue
+        ) * 100, 2
+    ) AS mom_growth_percentage
+FROM mom_growth
+ORDER BY month;
+```
 
 Realistic scenario questions
 
 A BigQuery query suddenly became 5 times slower. How do you troubleshoot?
 
+	For example, if a query that previously took 2 minutes suddenly takes 10 minutes, I first compare its execution plan and bytes scanned with the previous execution.
+
+	If bytes scanned increased, I investigate partition pruning and data growth.
+
+	If bytes scanned remain similar but execution time increases, I investigate shuffle operations, data skew, slot contention, and JOIN performance.
+
+	After identifying the bottleneck, I optimize the SQL, partitioning, clustering, or resource allocation as required.
+
 Your BigQuery bill increased by 300%. How do you investigate?
 
 A table contains 5 billion records. How will you design partitioning and clustering?
+
+	For a 5-billion-record table, I first analyze query patterns and identify frequently used filter and join columns. I choose date-based partitioning to reduce partition scanning and clustering on high-frequency filter or join columns. I also implement incremental ingestion, partition expiration if required, and monitor query execution details.
+
+	My main objective is to minimize bytes scanned, reduce shuffle operations, and improve query performance without unnecessarily increasing storage or compute costs.
 
 How do you implement incremental loading into BigQuery?
 
 How do you handle schema evolution in BigQuery?
 
+	I handle schema evolution using backward-compatible changes, schema validation, versioning, and controlled ALTER TABLE operations while ensuring downstream pipelines are not impacted.
+
 How do you design a BigQuery data warehouse for a retail company?
 
+	For a retail company, I would design a dimensional data warehouse using a Star Schema. I would collect data from POS, e-commerce, CRM, and ERP systems using batch and CDC pipelines.
+
+	I would create a central fact sales table connected to customer, product, store, and date dimensions. In BigQuery, I would partition the fact table by transaction date and cluster it based on frequently queried business keys.
+
+	For incremental processing, I would use CDC and MERGE operations. For historical tracking, I would implement SCD Type 2. Finally, I would implement data quality checks and expose curated datasets to Power BI or Looker."
+
+	Important senior-level interview point: Always define the grain of the fact table first. For example, one row per sales order line item. This prevents double counting and incorrect aggregations.
+
 How do you handle duplicate records arriving from streaming pipelines?
+
+	Suppose an e-commerce application publishes payment events to Pub/Sub.
+
+	The same payment event arrives three times due to retries.
+
+	My pipeline:
+
+	Pub/Sub receives the events.
+
+	Dataflow extracts the payment_id.
+
+	Stateful deduplication identifies repeated events.
+
+	Only one logical payment event is processed.
+
+	BigQuery MERGE provides an additional idempotency layer.
+
+	My key principle: I never rely on a single deduplication layer. I implement deduplication in the streaming layer and enforce idempotency in the sink to protect data integrity during retries, failures, and reprocessing.
 
 How do you implement row-level and column-level security?
 
@@ -326,15 +488,26 @@ Difference between Dataflow and Dataproc?
 
 Difference between Beam and Spark?
 
+	My choice depends on the workload. In GCP, I prefer Apache Beam with Dataflow for real-time streaming pipelines because of its event-time processing, windowing, and managed execution capabilities. For large-scale batch ETL, complex transformations, and Spark ecosystem workloads, I prefer PySpark on Dataproc. Both are powerful; the decision depends on latency, workload characteristics, operational overhead, and existing architecture.
+
 Explain Beam pipeline architecture.
 
 What are PCollection, PTransform, ParDo, and DoFn?
 
 What is the difference between GroupByKey and Combine?
 
-What is a side input?
+	In Apache Beam, both GroupByKey and Combine perform aggregation based on keys, but the key difference is:
 
-What is a side output?
+	GroupByKey: Groups all values associated with the same key.
+
+	Combine: Aggregates values associated with the same key into a single result using an aggregation function.
+	"I use GroupByKey when I need access to all values associated with a key. I prefer CombinePerKey when I need aggregations like sum, count, average, min, or max. Combine is generally more scalable because Beam can perform partial aggregation before the shuffle, reducing network data transfer."
+
+	Remember: CombinePerKey is not simply a replacement for GroupByKey. Choose based on whether you need the complete collection of values or only an aggregated result.
+
+
+What is a side input?
+	Side Input is used when a Beam transformation needs additional reference data to process the main input. Side Output is used when a single transformation needs to produce multiple outputs based on business conditions. For example, I use Side Input for customer enrichment and Side Output for routing valid and invalid transactions into separate BigQuery tables
 
 What is a runner in Apache Beam?
 
@@ -343,6 +516,10 @@ Streaming concepts
 Explain event time vs processing time.
 
 What is a watermark?
+
+	"Watermark in Apache Beam represents the estimated progress of event-time processing. It helps the pipeline decide when to trigger window computations and how to handle late-arriving events. In my Dataflow pipelines, I configure watermarks along with windowing, triggers, and allowed lateness to ensure accurate streaming aggregations despite out-of-order event arrival."
+	
+	Important follow-up: Watermark is not the same as a processing-time clock or a fixed delay. It is an estimate of event-time completeness.
 
 What is a window in Dataflow?
 
