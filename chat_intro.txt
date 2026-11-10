@@ -1,0 +1,14 @@
+My interview preparation profile: 10 years total experience. GCP experience: 5–7 years. Technologies: BigQuery, Dataflow, Cloud Composer, Python, PySpark, SQL, Pub/Sub, GCS, Cloud Functions, Airflow, Apache Beam. Target role: Lead Data Engineer. First focus: Project walkthrough and architecture. Please coach me accordingly.
+
+I work for a Big FMCG client who has some 90 products spread across 100 countries.
+On a typical day, I help business answer marketing questions.
+I fetch ads/ spend data from different social networks such as meta, tiktok, snapchat, dv360 etc and load the data into bigquery.
+I use Fivetran extensivesly as loading tool. Once the data is inside GCP, I follow medaalion architecture to cleanse and curate the data as per business needs. The data in final layer is exposed with an authorized view ti powerbi dashboard.
+
+On some other pipelines, the data is loaded from sftp to bigquery via airflow.
+
+Some other popelines the data is loaded into bigquery via cloud run(previous cloud fucntion). 
+
+I also follow delta lake format with iceberg as delta format. This is for a specific use case to maintain UDF(unified data format) and share data between bigquery and snowflake. 
+
+I also deal with bigquerys native connecters such as ga4 and gcs to give meaning full insights to business.
